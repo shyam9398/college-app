@@ -18,7 +18,7 @@ function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("http://localhost:5000/colleges")
+    fetch("https://college-app-vykr.onrender.com/colleges")
       .then(res => res.json())
       .then(data => setColleges(data));
   }, []);
