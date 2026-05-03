@@ -1,205 +1,243 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
+import Navbar, { SECTION_IDS } from "./components/Navbar";
+import CollegeCard from "./components/CollegeCard";
+import Pagination from "./components/Pagination";
+import SavedSection from "./components/SavedSection";
+import CompareSection from "./components/CompareSection";
+import CollegeDetailPage from "./components/CollegeDetailPage";
+import { dedupeColleges, isInCollegeList, sameCollege } from "./utils/college";
+import { loadSaved, persistSaved } from "./utils/storage";
 
 const API = "https://college-app-vykr.onrender.com/colleges";
-
-const Navbar = () => (
-  <div className="navbar">
-    <div className="logo">🎓 CollegeFinder</div>
-    <div className="nav-links">Home | Compare | Predictor</div>
-  </div>
-);
 
 function App() {
   const [colleges, setColleges] = useState([]);
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("All");
   const [selected, setSelected] = useState(null);
-
-  const [saved, setSaved] = useState(
-    JSON.parse(localStorage.getItem("saved")) || []
-  );
+  const [saved, setSaved] = useState(loadSaved);
   const [compareList, setCompareList] = useState([]);
-
   const [page, setPage] = useState(1);
-  const itemsPerPage = 4;
-
   const [rank, setRank] = useState("");
   const [predicted, setPredicted] = useState([]);
+
+  const itemsPerPage = 4;
+  const compareFull = compareList.length >= 3;
 
   useEffect(() => {
     fetch(API)
       .then((res) => res.json())
-      .then((data) => setColleges(data));
+      .then((data) => setColleges(Array.isArray(data) ? data : []))
+      .catch(() => setColleges([]));
   }, []);
 
-  const locations = useMemo(
-    () => ["All", ...new Set(colleges.map((c) => c.location))],
-    [colleges]
-  );
+  const locations = useMemo(() => {
+    const locs = colleges.map((c) => c.location).filter(Boolean);
+    return ["All", ...new Set(locs)];
+  }, [colleges]);
 
   const filtered = useMemo(() => {
-    return colleges.filter(
-      (c) =>
-        c.name.toLowerCase().includes(search.toLowerCase()) &&
-        (location === "All" || c.location === location)
-    );
+    const q = search.trim().toLowerCase();
+    return colleges.filter((c) => {
+      const name = (c.name || "").toLowerCase();
+      const matchSearch = !q || name.includes(q);
+      const matchLoc = location === "All" || c.location === location;
+      return matchSearch && matchLoc;
+    });
   }, [colleges, search, location]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+
+  useEffect(() => {
+    setPage((p) => (p > totalPages ? totalPages : p < 1 ? 1 : p));
+  }, [totalPages, filtered.length]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, location]);
+
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage),
+    [filtered, page, itemsPerPage]
   );
 
-  /* SAVE */
-  const toggleSave = (c) => {
-    const exists = saved.find((x) => x.id === c.id);
-    const updated = exists
-      ? saved.filter((x) => x.id !== c.id)
-      : [...saved, c];
+  const scrollToId = useCallback((id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
-    setSaved(updated);
-    localStorage.setItem("saved", JSON.stringify(updated));
-  };
+  const onNav = useCallback(
+    (section) => {
+      const id = SECTION_IDS[section] || SECTION_IDS.explorer;
+      scrollToId(id);
+    },
+    [scrollToId]
+  );
 
-  /* COMPARE */
-  const toggleCompare = (c) => {
-    const exists = compareList.find((x) => x.id === c.id);
-    if (exists) {
-      setCompareList(compareList.filter((x) => x.id !== c.id));
-    } else if (compareList.length < 3) {
-      setCompareList([...compareList, c]);
-    }
-  };
-
-  /* PREDICTOR */
-  const handlePredict = () => {
-    const r = parseInt(rank);
-
-    let result = colleges.filter((c) => {
-      if (r < 2000) return c.rating >= 4.7;
-      if (r < 5000) return c.rating >= 4.5;
-      if (r < 10000) return c.rating >= 4.3;
-      return c.rating >= 4.0;
+  const toggleSave = useCallback((c) => {
+    setSaved((prev) => {
+      const exists = isInCollegeList(prev, c);
+      const next = exists ? prev.filter((x) => !sameCollege(x, c)) : dedupeColleges([...prev, c]);
+      return persistSaved(next);
     });
+  }, []);
 
-    setPredicted(result.slice(0, 4));
-  };
+  const toggleCompare = useCallback((c) => {
+    setCompareList((prev) => {
+      if (isInCollegeList(prev, c)) {
+        return prev.filter((x) => !sameCollege(x, c));
+      }
+      if (prev.length >= 3) return prev;
+      return dedupeColleges([...prev, c]);
+    });
+  }, []);
 
-  /* DETAILS PAGE */
+  const removeFromCompare = useCallback((c) => {
+    setCompareList((prev) => prev.filter((x) => !sameCollege(x, c)));
+  }, []);
+
+  const handlePredict = useCallback(() => {
+    const r = parseInt(String(rank).replace(/\D/g, ""), 10);
+    if (Number.isNaN(r) || r < 1) {
+      setPredicted([]);
+      return;
+    }
+    const result = colleges.filter((col) => {
+      const rating = Number(col.rating) || 0;
+      if (r < 2000) return rating >= 4.7;
+      if (r < 5000) return rating >= 4.5;
+      if (r < 10000) return rating >= 4.3;
+      return rating >= 4.0;
+    });
+    setPredicted(result.slice(0, 8));
+  }, [colleges, rank]);
+
+  const closeDetail = useCallback((afterClose) => {
+    setSelected(null);
+    if (typeof afterClose === "function") {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(afterClose);
+      });
+    }
+  }, []);
+
   if (selected) {
     return (
-      <>
-        <Navbar />
-        <div className="detail">
-          <button className="back" onClick={() => setSelected(null)}>
-            ← Back
-          </button>
-          <h2>{selected.name}</h2>
-
-          <div className="detail-box">
-            <p>📍 {selected.location}</p>
-            <p>💰 ₹{selected.fees}</p>
-            <p>⭐ {selected.rating}</p>
-            <p>📊 Placement: {selected.placement}%</p>
-          </div>
-        </div>
-      </>
+      <CollegeDetailPage
+        college={selected}
+        onBack={closeDetail}
+        savedList={saved}
+        compareList={compareList}
+        onSave={toggleSave}
+        onCompare={toggleCompare}
+        compareFull={compareFull}
+      />
     );
   }
 
   return (
-    <>
-      <Navbar />
+    <div className="app-shell">
+      <Navbar onNav={onNav} />
 
-      <div className="app">
-        <h1>🎓 College Explorer</h1>
+      <main className="main">
+        <section id="section-explorer" className="section explorer-section">
+          <h1 className="page-title">College explorer</h1>
+          <p className="page-subtitle">Search, filter, save, and compare institutions in one place.</p>
 
-        {/* SEARCH */}
-        <div className="controls">
-          <input
-            placeholder="Search college..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <select
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          >
-            {locations.map((l, i) => (
-              <option key={i}>{l}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* CARDS */}
-        <div className="grid">
-          {paginated.map((c) => (
-            <div className="card" key={c.id}>
-              <h3>{c.name}</h3>
-
-              <p>📍 {c.location}</p>
-              <p>💰 ₹{c.fees}</p>
-              <p>⭐ {c.rating}</p>
-              <p>📊 Placement: {c.placement}%</p>
-
-              <div className="btn-group">
-                <button onClick={() => setSelected(c)}>Details</button>
-                <button onClick={() => toggleSave(c)}>
-                  {saved.find((x) => x.id === c.id) ? "Saved" : "Save"}
-                </button>
-                <button onClick={() => toggleCompare(c)}>Compare</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* PAGINATION */}
-        <div className="pagination">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              className={page === i + 1 ? "active-page" : ""}
-              onClick={() => setPage(i + 1)}
+          <div className="controls">
+            <label className="sr-only" htmlFor="search-colleges">
+              Search colleges
+            </label>
+            <input
+              id="search-colleges"
+              className="input-rounded"
+              placeholder="Search by college name…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoComplete="off"
+            />
+            <label className="sr-only" htmlFor="filter-location">
+              Filter by location
+            </label>
+            <select
+              id="filter-location"
+              className="input-rounded select-rounded"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
             >
-              {i + 1}
-            </button>
-          ))}
-        </div>
-
-        {/* SAVED */}
-        {saved.length > 0 && (
-          <div className="saved">
-            <h3>⭐ Saved Colleges</h3>
-            {saved.map((c) => (
-              <p key={c.id}>{c.name}</p>
-            ))}
+              {locations.map((l) => (
+                <option key={l} value={l}>
+                  {l === "All" ? "All locations" : l}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
 
-        {/* PREDICTOR */}
-        <div className="predictor">
-          <h3>🎯 Rank Predictor</h3>
-          <input
-            placeholder="Enter your rank..."
-            value={rank}
-            onChange={(e) => setRank(e.target.value)}
-          />
-          <button onClick={handlePredict}>Predict</button>
-
-          <div className="grid">
-            {predicted.map((c) => (
-              <div className="card" key={c.id}>
-                <h4>{c.name}</h4>
-                <p>⭐ {c.rating}</p>
+          {filtered.length === 0 ? (
+            <p className="empty-hint">No colleges match your filters. Try clearing the search or location.</p>
+          ) : (
+            <>
+              <div className="grid grid-responsive">
+                {paginated.map((c) => (
+                  <CollegeCard
+                    key={String(c.id)}
+                    college={c}
+                    savedList={saved}
+                    onDetails={setSelected}
+                    onSave={toggleSave}
+                    onCompare={toggleCompare}
+                    inCompare={isInCollegeList(compareList, c)}
+                    compareFull={compareFull}
+                  />
+                ))}
               </div>
-            ))}
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            </>
+          )}
+        </section>
+
+        <SavedSection saved={saved} onUnsave={toggleSave} onDetails={setSelected} />
+
+        <CompareSection compareList={compareList} onRemove={removeFromCompare} />
+
+        <section id="section-predictor" className="section predictor-section">
+          <h2 className="section-title">Rank predictor</h2>
+          <p className="section-lead">Enter your entrance rank; we suggest colleges by rating bands.</p>
+          <div className="predictor-controls">
+            <label className="sr-only" htmlFor="rank-input">
+              Your rank
+            </label>
+            <input
+              id="rank-input"
+              className="input-rounded"
+              inputMode="numeric"
+              placeholder="e.g. 4500"
+              value={rank}
+              onChange={(e) => setRank(e.target.value)}
+            />
+            <button type="button" className="btn btn-primary" onClick={handlePredict}>
+              Predict matches
+            </button>
           </div>
-        </div>
-      </div>
-    </>
+          {predicted.length > 0 && (
+            <div className="grid grid-responsive predictor-grid">
+              {predicted.map((c) => (
+                <CollegeCard
+                  key={String(c.id)}
+                  college={c}
+                  savedList={saved}
+                  onDetails={setSelected}
+                  onSave={toggleSave}
+                  onCompare={toggleCompare}
+                  inCompare={isInCollegeList(compareList, c)}
+                  compareFull={compareFull}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }
 
