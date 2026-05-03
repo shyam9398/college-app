@@ -4,9 +4,9 @@ function CompareSection({ compareList, onRemove }) {
   return (
     <section id="section-compare" className="section compare-section">
       <h2 className="section-title">Compare colleges</h2>
-      <p className="section-lead">Pick up to 3 colleges using Compare on each card or from the details page.</p>
+      <p className="section-lead">Select up to 3 colleges. Compare fees, ratings, placement, and location side by side.</p>
       {compareList.length === 0 ? (
-        <p className="empty-hint">Nothing selected yet. Choose Compare on up to three colleges.</p>
+        <p className="empty-hint">Nothing selected yet. Use Compare on a card (or from details).</p>
       ) : (
         <div className="compare-wrap">
           <div className="compare-horizontal-scroll">
@@ -24,6 +24,9 @@ function CompareSection({ compareList, onRemove }) {
                 <div role="columnheader" className="compare-cell">
                   Placement
                 </div>
+                <div role="columnheader" className="compare-cell">
+                  Location
+                </div>
                 <div role="columnheader" className="compare-cell compare-cell--action" aria-hidden="true" />
               </div>
               {compareList.map((c) => (
@@ -39,6 +42,9 @@ function CompareSection({ compareList, onRemove }) {
                   </div>
                   <div role="cell" className="compare-cell">
                     {c.placement}%
+                  </div>
+                  <div role="cell" className="compare-cell">
+                    {c.location}
                   </div>
                   <div role="cell" className="compare-cell compare-cell--action">
                     <button
@@ -60,4 +66,4 @@ function CompareSection({ compareList, onRemove }) {
   );
 }
 
-export default CompareSection;
+export default React.memo(CompareSection);

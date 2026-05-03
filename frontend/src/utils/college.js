@@ -25,3 +25,23 @@ export function dedupeColleges(list) {
   }
   return out;
 }
+
+/** Tier 0 = Top Tier (>4.7), 1 = Good Choice (>4.3), 2 = other — matches RatingTag. */
+function ratingTier(rating) {
+  const r = Number(rating);
+  if (Number.isNaN(r)) return 2;
+  if (r > 4.7) return 0;
+  if (r > 4.3) return 1;
+  return 2;
+}
+
+/** Top Tier first, then Good, then others; within tier by rating desc, then name. */
+export function sortCollegesByRatingTier(a, b) {
+  const ta = ratingTier(a.rating);
+  const tb = ratingTier(b.rating);
+  if (ta !== tb) return ta - tb;
+  const ra = Number(a.rating) || 0;
+  const rb = Number(b.rating) || 0;
+  if (rb !== ra) return rb - ra;
+  return String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" });
+}

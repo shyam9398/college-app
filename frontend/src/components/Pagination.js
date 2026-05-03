@@ -1,6 +1,6 @@
 import React from "react";
 
-function Pagination({ page, totalPages, onPageChange }) {
+function PaginationInner({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
   return (
     <nav className="pagination" aria-label="Pages">
@@ -19,4 +19,5 @@ function Pagination({ page, totalPages, onPageChange }) {
   );
 }
 
+const Pagination = React.memo(PaginationInner);
 export default Pagination;

@@ -2,7 +2,7 @@ import React from "react";
 import RatingTag from "./RatingTag";
 import { isInCollegeList } from "../utils/college";
 
-function CollegeCard({
+function CollegeCardInner({
   college,
   savedList,
   onDetails,
@@ -55,4 +55,5 @@ function CollegeCard({
   );
 }
 
+const CollegeCard = React.memo(CollegeCardInner);
 export default CollegeCard;
