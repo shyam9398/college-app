@@ -3,7 +3,6 @@ import "./App.css";
 
 const API = "https://college-app-vykr.onrender.com/colleges";
 
-/* NAVBAR */
 const Navbar = () => (
   <div className="navbar">
     <div className="logo">🎓 CollegeFinder</div>
@@ -16,10 +15,17 @@ function App() {
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("All");
   const [selected, setSelected] = useState(null);
-  const [compareList, setCompareList] = useState([]);
-  const [page, setPage] = useState(1);
 
+  const [saved, setSaved] = useState(
+    JSON.parse(localStorage.getItem("saved")) || []
+  );
+  const [compareList, setCompareList] = useState([]);
+
+  const [page, setPage] = useState(1);
   const itemsPerPage = 4;
+
+  const [rank, setRank] = useState("");
+  const [predicted, setPredicted] = useState([]);
 
   useEffect(() => {
     fetch(API)
@@ -41,9 +47,21 @@ function App() {
   }, [colleges, search, location]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
 
-  const start = (page - 1) * itemsPerPage;
-  const paginated = filtered.slice(start, start + itemsPerPage);
+  /* SAVE */
+  const toggleSave = (c) => {
+    const exists = saved.find((x) => x.id === c.id);
+    const updated = exists
+      ? saved.filter((x) => x.id !== c.id)
+      : [...saved, c];
+
+    setSaved(updated);
+    localStorage.setItem("saved", JSON.stringify(updated));
+  };
 
   /* COMPARE */
   const toggleCompare = (c) => {
@@ -55,7 +73,21 @@ function App() {
     }
   };
 
-  /* DETAIL PAGE */
+  /* PREDICTOR */
+  const handlePredict = () => {
+    const r = parseInt(rank);
+
+    let result = colleges.filter((c) => {
+      if (r < 2000) return c.rating >= 4.7;
+      if (r < 5000) return c.rating >= 4.5;
+      if (r < 10000) return c.rating >= 4.3;
+      return c.rating >= 4.0;
+    });
+
+    setPredicted(result.slice(0, 4));
+  };
+
+  /* DETAILS PAGE */
   if (selected) {
     return (
       <>
@@ -64,7 +96,6 @@ function App() {
           <button className="back" onClick={() => setSelected(null)}>
             ← Back
           </button>
-
           <h2>{selected.name}</h2>
 
           <div className="detail-box">
@@ -85,23 +116,17 @@ function App() {
       <div className="app">
         <h1>🎓 College Explorer</h1>
 
-        {/* SEARCH + FILTER */}
+        {/* SEARCH */}
         <div className="controls">
           <input
             placeholder="Search college..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
           />
 
           <select
             value={location}
-            onChange={(e) => {
-              setLocation(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setLocation(e.target.value)}
           >
             {locations.map((l, i) => (
               <option key={i}>{l}</option>
@@ -109,16 +134,10 @@ function App() {
           </select>
         </div>
 
-        {/* GRID */}
+        {/* CARDS */}
         <div className="grid">
           {paginated.map((c) => (
             <div className="card" key={c.id}>
-              <input
-                type="checkbox"
-                checked={compareList.find((x) => x.id === c.id)}
-                onChange={() => toggleCompare(c)}
-              />
-
               <h3>{c.name}</h3>
 
               <p>📍 {c.location}</p>
@@ -126,9 +145,13 @@ function App() {
               <p>⭐ {c.rating}</p>
               <p>📊 Placement: {c.placement}%</p>
 
-              <button onClick={() => setSelected(c)}>
-                View Details
-              </button>
+              <div className="btn-group">
+                <button onClick={() => setSelected(c)}>Details</button>
+                <button onClick={() => toggleSave(c)}>
+                  {saved.find((x) => x.id === c.id) ? "Saved" : "Save"}
+                </button>
+                <button onClick={() => toggleCompare(c)}>Compare</button>
+              </div>
             </div>
           ))}
         </div>
@@ -146,48 +169,35 @@ function App() {
           ))}
         </div>
 
-        {/* COMPARE TABLE */}
-        {compareList.length >= 2 && (
-          <div className="compare-table">
-            <h3>Compare Colleges</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  {compareList.map((c) => (
-                    <th key={c.id}>{c.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Fees</td>
-                  {compareList.map((c) => (
-                    <td key={c.id}>₹{c.fees}</td>
-                  ))}
-                </tr>
-                <tr>
-                  <td>Rating</td>
-                  {compareList.map((c) => (
-                    <td key={c.id}>{c.rating}</td>
-                  ))}
-                </tr>
-                <tr>
-                  <td>Placement</td>
-                  {compareList.map((c) => (
-                    <td key={c.id}>{c.placement}%</td>
-                  ))}
-                </tr>
-                <tr>
-                  <td>Location</td>
-                  {compareList.map((c) => (
-                    <td key={c.id}>{c.location}</td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+        {/* SAVED */}
+        {saved.length > 0 && (
+          <div className="saved">
+            <h3>⭐ Saved Colleges</h3>
+            {saved.map((c) => (
+              <p key={c.id}>{c.name}</p>
+            ))}
           </div>
         )}
+
+        {/* PREDICTOR */}
+        <div className="predictor">
+          <h3>🎯 Rank Predictor</h3>
+          <input
+            placeholder="Enter your rank..."
+            value={rank}
+            onChange={(e) => setRank(e.target.value)}
+          />
+          <button onClick={handlePredict}>Predict</button>
+
+          <div className="grid">
+            {predicted.map((c) => (
+              <div className="card" key={c.id}>
+                <h4>{c.name}</h4>
+                <p>⭐ {c.rating}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   );

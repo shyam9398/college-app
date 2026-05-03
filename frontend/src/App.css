@@ -1,7 +1,7 @@
 body {
   margin: 0;
   font-family: Arial;
-  background: #eef2f7;
+  background: #eef3ff;
 }
 
 /* NAVBAR */
@@ -13,24 +13,13 @@ body {
   justify-content: space-between;
 }
 
-.logo {
-  font-size: 20px;
-  font-weight: bold;
-}
-
 /* MAIN */
 .app {
   text-align: center;
   padding: 30px;
 }
 
-h1 {
-  color: #2d4a9d;
-}
-
-/* CONTROLS */
 .controls {
-  margin: 20px 0;
   display: flex;
   justify-content: center;
   gap: 10px;
@@ -38,7 +27,7 @@ h1 {
 
 input, select {
   padding: 10px;
-  border-radius: 12px;
+  border-radius: 15px;
   border: 1px solid #ccc;
 }
 
@@ -47,15 +36,14 @@ input, select {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  max-width: 1200px;
-  margin: auto;
+  margin-top: 20px;
 }
 
 /* CARD */
 .card {
-  background: #f3f4f6;
+  background: #f5f7ff;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 15px;
   text-align: left;
   transition: 0.3s;
 }
@@ -64,10 +52,15 @@ input, select {
   transform: scale(1.05);
 }
 
-/* BUTTON */
-button {
+/* BUTTON GROUP */
+.btn-group {
+  display: flex;
+  gap: 5px;
   margin-top: 10px;
-  padding: 8px;
+}
+
+button {
+  padding: 6px 10px;
   border: none;
   border-radius: 6px;
   background: #3b6df6;
@@ -75,20 +68,22 @@ button {
 }
 
 /* PAGINATION */
-.pagination {
-  margin-top: 20px;
-}
-
 .pagination button {
   margin: 5px;
-  padding: 8px 12px;
-  background: #dbeafe;
-  border-radius: 6px;
 }
 
 .active-page {
-  background: #2563eb !important;
-  color: white;
+  background: #1d4ed8;
+}
+
+/* SAVED */
+.saved {
+  margin-top: 20px;
+}
+
+/* PREDICTOR */
+.predictor {
+  margin-top: 30px;
 }
 
 /* DETAIL */
@@ -98,25 +93,4 @@ button {
 
 .back {
   margin-bottom: 10px;
-  background: #ddd;
-  padding: 5px 10px;
-  border-radius: 6px;
-}
-
-/* COMPARE */
-.compare-table {
-  margin-top: 20px;
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-td, th {
-  border: 1px solid #ddd;
-  padding: 8px;
 }
