@@ -1,94 +1,109 @@
 body {
   margin: 0;
   font-family: Arial;
-  background: #eef5ff;
+  background: #eef2f7;
 }
 
+/* NAVBAR */
+.navbar {
+  background: #2d4a9d;
+  color: white;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+/* MAIN */
 .app {
-  padding: 20px;
+  text-align: center;
+  padding: 30px;
 }
 
 h1 {
-  text-align: center;
-  color: #2563eb;
+  color: #2d4a9d;
 }
 
+/* CONTROLS */
 .controls {
+  margin: 20px 0;
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
 }
 
 input, select {
-  padding: 12px;
-  border-radius: 25px;
-  border: 1px solid #cbd5e1;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
 }
 
-/* Cards */
+/* GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+  max-width: 1200px;
+  margin: auto;
 }
 
+/* CARD */
 .card {
-  background: white;
+  background: #f3f4f6;
   padding: 20px;
-  border-radius: 15px;
+  border-radius: 12px;
+  text-align: left;
   transition: 0.3s;
 }
 
 .card:hover {
-  transform: scale(1.07);
+  transform: scale(1.05);
 }
 
-/* Actions */
-.actions {
-  display: flex;
-  gap: 6px;
+/* BUTTON */
+button {
   margin-top: 10px;
-}
-
-.actions button {
-  flex: 1;
-  padding: 6px;
-  border-radius: 6px;
+  padding: 8px;
   border: none;
-  background: #3b82f6;
+  border-radius: 6px;
+  background: #3b6df6;
   color: white;
 }
 
-.actions .active {
-  background: #16a34a;
-}
-
-/* Pagination */
+/* PAGINATION */
 .pagination {
   margin-top: 20px;
-  text-align: center;
 }
 
 .pagination button {
-  margin: 0 5px;
-  padding: 6px 10px;
+  margin: 5px;
+  padding: 8px 12px;
+  background: #dbeafe;
   border-radius: 6px;
-  border: none;
-  background: #cbd5e1;
 }
 
-.page-active {
+.active-page {
   background: #2563eb !important;
   color: white;
 }
 
-/* Compare */
-.compare-bar {
-  text-align: center;
-  margin-bottom: 10px;
+/* DETAIL */
+.detail {
+  padding: 20px;
 }
 
+.back {
+  margin-bottom: 10px;
+  background: #ddd;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+/* COMPARE */
 .compare-table {
   margin-top: 20px;
   background: white;
@@ -104,5 +119,4 @@ table {
 td, th {
   border: 1px solid #ddd;
   padding: 8px;
-  text-align: center;
 }
