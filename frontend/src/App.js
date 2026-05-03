@@ -7,34 +7,28 @@ function App() {
   const [colleges, setColleges] = useState([]);
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("All");
-  const [compareList, setCompareList] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(
     JSON.parse(localStorage.getItem("saved")) || []
   );
 
-  // Fetch data
   useEffect(() => {
     fetch(API)
       .then((res) => res.json())
       .then((data) => setColleges(data));
   }, []);
 
-  // Unique locations
-  const locations = ["All", ...new Set(colleges.map((c) => c.location))];
+  const locations = ["All", ...new Set(colleges.map(c => c.location))];
 
-  // Filter
-  const filtered = colleges.filter((c) => {
-    return (
-      c.name.toLowerCase().includes(search.toLowerCase()) &&
-      (location === "All" || c.location === location)
-    );
-  });
+  const filtered = colleges.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) &&
+    (location === "All" || c.location === location)
+  );
 
-  // Save
   const toggleSave = (college) => {
     let updated;
-    if (saved.find((c) => c.id === college.id)) {
-      updated = saved.filter((c) => c.id !== college.id);
+    if (saved.find(c => c.id === college.id)) {
+      updated = saved.filter(c => c.id !== college.id);
     } else {
       updated = [...saved, college];
     }
@@ -42,20 +36,57 @@ function App() {
     localStorage.setItem("saved", JSON.stringify(updated));
   };
 
-  // Compare
-  const toggleCompare = (college) => {
-    if (compareList.find((c) => c.id === college.id)) {
-      setCompareList(compareList.filter((c) => c.id !== college.id));
-    } else if (compareList.length < 3) {
-      setCompareList([...compareList, college]);
-    }
-  };
+  // 🎯 DETAIL VIEW PAGE
+  if (selected) {
+    return (
+      <div className="detail-page">
+        <button className="back" onClick={() => setSelected(null)}>← Back</button>
+
+        <h1>{selected.name}</h1>
+
+        <div className="detail-grid">
+          <div className="detail-card">
+            <h3>Location</h3>
+            <p>{selected.location}</p>
+          </div>
+
+          <div className="detail-card">
+            <h3>Fees</h3>
+            <p>₹{selected.fees}</p>
+          </div>
+
+          <div className="detail-card">
+            <h3>Rating</h3>
+            <p>{selected.rating}</p>
+          </div>
+
+          <div className="detail-card">
+            <h3>Placement</h3>
+            <p>{selected.placement}%</p>
+          </div>
+        </div>
+
+        <div className="decision-box">
+          <h2>Decision Insight</h2>
+          <p>
+            {selected.rating > 4.7
+              ? "🔥 Top-tier college with excellent placement and reputation."
+              : "👍 Good college with balanced fees and placement."}
+          </p>
+        </div>
+
+        <button onClick={() => toggleSave(selected)}>
+          {saved.find(c => c.id === selected.id) ? "Saved ✓" : "Save College"}
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="container">
-      <h1>🎓 Find the Best College for You</h1>
+    <div className="app">
+      <h1>🎯 Find Your Best College</h1>
 
-      {/* Search + Filter */}
+      {/* Search */}
       <div className="controls">
         <input
           placeholder="Search college..."
@@ -70,91 +101,29 @@ function App() {
         </select>
       </div>
 
-      {/* College Cards */}
+      <h2>Top Colleges</h2>
+
       <div className="grid">
-        {filtered.map((c) => (
+        {filtered.map(c => (
           <div className="card" key={c.id}>
             <h3>{c.name}</h3>
-            <p>📍 {c.location}</p>
-            <p>💰 ₹{c.fees}</p>
-            <p>⭐ {c.rating}</p>
-            <p>🎯 Placement: {c.placement}%</p>
+            <p>{c.location}</p>
 
-            <p className="tag">
-              {c.rating > 4.7 ? "🔥 Top Tier College" : "👍 Good Choice"}
-            </p>
+            <div className="stats">
+              <span>₹{c.fees}</span>
+              <span>{c.rating}⭐</span>
+              <span>{c.placement}%</span>
+            </div>
 
-            <div className="buttons">
-              <button onClick={() => toggleCompare(c)}>
-                {compareList.find((x) => x.id === c.id)
-                  ? "Remove Compare"
-                  : "Compare"}
-              </button>
-
+            <div className="actions">
+              <button onClick={() => setSelected(c)}>View Details</button>
               <button onClick={() => toggleSave(c)}>
-                {saved.find((x) => x.id === c.id)
-                  ? "Saved"
-                  : "Save"}
+                {saved.find(x => x.id === c.id) ? "Saved" : "Save"}
               </button>
             </div>
           </div>
         ))}
       </div>
-
-      {/* Compare Section */}
-      {compareList.length > 0 && (
-        <div className="compare">
-          <h2>⚖️ Compare Colleges</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Field</th>
-                {compareList.map((c) => (
-                  <th key={c.id}>{c.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Location</td>
-                {compareList.map((c) => (
-                  <td key={c.id}>{c.location}</td>
-                ))}
-              </tr>
-              <tr>
-                <td>Fees</td>
-                {compareList.map((c) => (
-                  <td key={c.id}>₹{c.fees}</td>
-                ))}
-              </tr>
-              <tr>
-                <td>Rating</td>
-                {compareList.map((c) => (
-                  <td key={c.id}>{c.rating}</td>
-                ))}
-              </tr>
-              <tr>
-                <td>Placement</td>
-                {compareList.map((c) => (
-                  <td key={c.id}>{c.placement}%</td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Saved Section */}
-      {saved.length > 0 && (
-        <div className="saved">
-          <h2>⭐ Saved Colleges</h2>
-          <ul>
-            {saved.map((c) => (
-              <li key={c.id}>{c.name}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
