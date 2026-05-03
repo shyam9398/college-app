@@ -22,7 +22,7 @@ function App() {
   // Unique locations
   const locations = ["All", ...new Set(colleges.map((c) => c.location))];
 
-  // Filter logic
+  // Filter
   const filtered = colleges.filter((c) => {
     return (
       c.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -30,7 +30,7 @@ function App() {
     );
   });
 
-  // Save college
+  // Save
   const toggleSave = (college) => {
     let updated;
     if (saved.find((c) => c.id === college.id)) {
@@ -42,7 +42,7 @@ function App() {
     localStorage.setItem("saved", JSON.stringify(updated));
   };
 
-  // Compare logic
+  // Compare
   const toggleCompare = (college) => {
     if (compareList.find((c) => c.id === college.id)) {
       setCompareList(compareList.filter((c) => c.id !== college.id));
@@ -53,9 +53,9 @@ function App() {
 
   return (
     <div className="container">
-      <h1>🎓 College Explorer</h1>
+      <h1>🎓 Find the Best College for You</h1>
 
-      {/* SEARCH + FILTER */}
+      {/* Search + Filter */}
       <div className="controls">
         <input
           placeholder="Search college..."
@@ -70,7 +70,7 @@ function App() {
         </select>
       </div>
 
-      {/* COLLEGE LIST */}
+      {/* College Cards */}
       <div className="grid">
         {filtered.map((c) => (
           <div className="card" key={c.id}>
@@ -80,22 +80,28 @@ function App() {
             <p>⭐ {c.rating}</p>
             <p>🎯 Placement: {c.placement}%</p>
 
-            <button onClick={() => toggleCompare(c)}>
-              {compareList.find((x) => x.id === c.id)
-                ? "Remove Compare"
-                : "Compare"}
-            </button>
+            <p className="tag">
+              {c.rating > 4.7 ? "🔥 Top Tier College" : "👍 Good Choice"}
+            </p>
 
-            <button onClick={() => toggleSave(c)}>
-              {saved.find((x) => x.id === c.id)
-                ? "Saved"
-                : "Save"}
-            </button>
+            <div className="buttons">
+              <button onClick={() => toggleCompare(c)}>
+                {compareList.find((x) => x.id === c.id)
+                  ? "Remove Compare"
+                  : "Compare"}
+              </button>
+
+              <button onClick={() => toggleSave(c)}>
+                {saved.find((x) => x.id === c.id)
+                  ? "Saved"
+                  : "Save"}
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* COMPARE SECTION */}
+      {/* Compare Section */}
       {compareList.length > 0 && (
         <div className="compare">
           <h2>⚖️ Compare Colleges</h2>
@@ -138,13 +144,15 @@ function App() {
         </div>
       )}
 
-      {/* SAVED */}
+      {/* Saved Section */}
       {saved.length > 0 && (
         <div className="saved">
           <h2>⭐ Saved Colleges</h2>
-          {saved.map((c) => (
-            <p key={c.id}>{c.name}</p>
-          ))}
+          <ul>
+            {saved.map((c) => (
+              <li key={c.id}>{c.name}</li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
