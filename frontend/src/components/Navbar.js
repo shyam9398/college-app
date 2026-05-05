@@ -37,7 +37,13 @@ function Navbar({ onNav = () => {}, compareCount = 0 }) {
             )}
           </button>
           <button type="button" onClick={() => onNav("predictor")}>
-            Rank predictor
+            Rank Predictor
+          </button>
+          <button type="button" className="nav-auth-btn">
+            Login
+          </button>
+          <button type="button" className="nav-auth-btn nav-auth-btn--solid">
+            Sign Up
           </button>
         </nav>
       </div>

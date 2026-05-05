@@ -1,11 +1,11 @@
 :root {
-  --bg: #e8f2fc;
+  --bg: #f8fbff;
   --bg-elevated: #ffffff;
   --surface: #f0f7ff;
   --border: #c5daf0;
   --text: #1a2d45;
   --text-muted: #4a6578;
-  --primary: #2563eb;
+  --primary: #3b82f6;
   --primary-hover: #1d4ed8;
   --nav: #3b82f6;
   --radius-lg: 16px;
@@ -1360,6 +1360,53 @@ body {
   gap: 10px;
 }
 
+.goal-chips {
+  margin-bottom: 16px;
+}
+
+.goal-chips__scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.goal-chips__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.goal-chip {
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition);
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.goal-chip:hover {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.goal-chip--active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
 .filter-bar__search {
   max-width: 400px;
   width: 100%;
@@ -1469,4 +1516,73 @@ body {
   font-size: 0.72rem;
   line-height: 1;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.hero {
+  text-align: center;
+}
+
+.hero__title {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+}
+
+.hero__tagline {
+  margin: 6px 0 18px;
+  color: var(--text-muted);
+}
+
+.nav-auth-btn {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.nav-auth-btn--solid {
+  background: #ffffff;
+  color: var(--primary) !important;
+}
+
+.detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 150;
+}
+
+.detail-modal {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+  position: relative;
+}
+
+.detail-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  font-size: 1.7rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.detail-modal__title {
+  margin: 0 0 8px;
+}
+
+.detail-modal__location,
+.detail-modal__description {
+  color: var(--text-muted);
+}
+
+.detail-modal__section {
+  margin-top: 16px;
 }

@@ -18,31 +18,21 @@ export const RATING_FILTER_OPTIONS = [
 
 export const COURSE_FILTER_OPTIONS = [
   { value: "All", label: "All courses" },
-  { value: "CSE", label: "CSE" },
-  { value: "ECE", label: "ECE" },
-  { value: "Mechanical", label: "Mechanical" },
-  { value: "IT", label: "IT" },
-  { value: "EEE", label: "EEE" },
-  { value: "CIVIL", label: "CIVIL" },
-  { value: "AIML", label: "AIML" },
-  { value: "AIDS", label: "AIDS" },
+  { value: "B.Tech", label: "B.Tech" },
+  { value: "MBA", label: "MBA" },
+  { value: "B.Com", label: "B.Com" },
+  { value: "MBBS", label: "MBBS" },
+  { value: "LLB", label: "LLB" },
 ];
 
-function matchesCourse(courses, selectedCourse) {
-  if (!Array.isArray(courses)) return false;
+function matchesCourse(courseName, courses, selectedCourse) {
   const sc = String(selectedCourse || "").toLowerCase();
-  const aliases = {
-    aiml: ["aiml", "artificial intelligence", "machine learning", "ai"],
-    aids: ["aids", "artificial intelligence and data science", "data science", "ai"],
-    civil: ["civil"],
-    eee: ["eee", "electrical and electronics"],
-    it: ["it", "information technology"],
-  };
-  const keys = aliases[sc] || [sc];
-  return courses.some((course) => {
-    const lc = String(course || "").toLowerCase();
-    return keys.some((k) => lc.includes(k));
-  });
+  const normalizedCourse = String(courseName || "").toLowerCase().trim();
+  if (normalizedCourse === sc) return true;
+  if (!Array.isArray(courses)) return false;
+  return courses.some((course) =>
+    String(course || "").toLowerCase().includes(sc)
+  );
 }
 
 function feesInRange(feesValue, rangeKey) {
@@ -56,12 +46,24 @@ function feesInRange(feesValue, rangeKey) {
 
 /**
  * @param {Array} colleges
- * @param {{ search: string, location: string, feesRange: string, ratingMin: string, course: string }} criteria
+ * @param {{ search: string, location: string, feesRange: string, ratingMin: string, course: string, goal: string }} criteria
  */
-export function filterColleges(colleges, { search, location, feesRange, ratingMin, course }) {
+export function filterColleges(colleges, { search, location, feesRange, ratingMin, course, goal = 'All' }) {
+  const GOAL_TO_COURSE_MAP = {
+    Engineering: 'B.Tech',
+    Medicine: 'MBBS',
+    Law: 'LLB',
+    MBA: 'MBA',
+    Design: 'B.Des',
+    Science: 'B.Sc'
+  };
+  let effectiveCourse = course;
+  if (goal !== 'All' && !course) {
+    effectiveCourse = GOAL_TO_COURSE_MAP[goal] || goal;
+  }
   const q = (search || "").trim().toLowerCase();
   const minRating = ratingMin && ratingMin !== "all" ? Number(ratingMin) : null;
-  const selectedCourse = String(course || "All").toLowerCase();
+  const selectedCourse = String(effectiveCourse || "All").toLowerCase();
 
   const list = (colleges || []).filter((c) => {
     const name = (c.name || "").toLowerCase();
@@ -73,7 +75,7 @@ export function filterColleges(colleges, { search, location, feesRange, ratingMi
       if (Number.isNaN(r) || r < minRating) return false;
     }
     if (selectedCourse !== "all") {
-      const hasCourse = matchesCourse(c.courses, selectedCourse);
+      const hasCourse = matchesCourse(c.course, c.courses, selectedCourse);
       if (!hasCourse) return false;
     }
     return true;

@@ -3,9 +3,9 @@ import { buildChatbotReply } from "../utils/chatbotEngine";
 import { getCollegeWebsiteUrl } from "../utils/collegeWebsite";
 
 const QUICK_ACTIONS = [
-  { label: "Recommend by rank", text: "My rank is 4500. Recommend colleges." },
-  { label: "What is CSE?", text: "What is CSE?" },
-  { label: "Top colleges", text: "Show top colleges by rating." },
+  { label: "Recommend Colleges", text: "My rank is 4500. Recommend colleges." },
+  { label: "Best Course", text: "Which is the best course for me?" },
+  { label: "Search by Rank", text: "Search by rank 12000 for B.Tech colleges." },
 ];
 
 function SegmentsView({ segments, onPickCollege }) {
