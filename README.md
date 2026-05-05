@@ -8,8 +8,9 @@ A full-stack web application that helps students **search, compare, and choose t
 
 ## 🌐 Live Demo
 
-👉 https://college-app-eight.vercel.app/
-
+👉 https://college-app-mhyb.vercel.app/
+Github Repo:
+👉 https://github.com/shyam9398/college-app.git
 ---
 
 ## 🚀 Features
