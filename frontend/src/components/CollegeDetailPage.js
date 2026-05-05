@@ -95,8 +95,8 @@ function CollegeDetailPage({
         </div>
 
         <div className="detail-actions">
-          <button type="button" className="btn btn-primary" onClick={() => onSave(college)}>
-            {isSaved ? "Remove from saved" : "Save college"}
+          <button type="button" className={`btn ${isSaved ? "btn-saved" : "btn-save"}`} onClick={() => onSave(college)}>
+            {isSaved ? "💙 Saved" : "🤍 Save"}
           </button>
           <button
             type="button"
@@ -109,7 +109,7 @@ function CollegeDetailPage({
                 : undefined
             }
           >
-            {inCompare ? "Remove from compare" : "Add to compare"}
+            {inCompare ? "Selected" : "Compare"}
           </button>
         </div>
       </main>

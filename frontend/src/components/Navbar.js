@@ -7,7 +7,7 @@ const SECTION_IDS = {
   predictor: "section-predictor",
 };
 
-function Navbar({ onNav = () => {} }) {
+function Navbar({ onNav = () => {}, compareCount = 0 }) {
   return (
     <header className="navbar">
       <div className="navbar-inner">
@@ -21,8 +21,17 @@ function Navbar({ onNav = () => {} }) {
           <button type="button" onClick={() => onNav("saved")}>
             Saved
           </button>
-          <button type="button" onClick={() => onNav("compare")}>
+          <button 
+            type="button" 
+            className="compare-nav-badge"
+            onClick={() => onNav("compare")}
+          >
             Compare
+            {compareCount > 0 && (
+              <span className="compare-nav-pill">
+                {compareCount}/3
+              </span>
+            )}
           </button>
           <button type="button" onClick={() => onNav("predictor")}>
             Rank predictor
@@ -32,6 +41,7 @@ function Navbar({ onNav = () => {} }) {
     </header>
   );
 }
+
 
 export { SECTION_IDS };
 export default Navbar;

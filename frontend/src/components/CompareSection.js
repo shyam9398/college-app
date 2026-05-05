@@ -4,7 +4,7 @@ function CompareSection({ compareList, onRemove }) {
   return (
     <section id="section-compare" className="section compare-section">
       <h2 className="section-title">Compare colleges</h2>
-      <p className="section-lead">Select up to 3 colleges. Compare fees, ratings, placement, and location side by side.</p>
+      <p className="section-lead">Compare fees, ratings, placement, and location side by side.</p>
       {compareList.length === 0 ? (
         <p className="empty-hint">Nothing selected yet. Use Compare on a card (or from details).</p>
       ) : (

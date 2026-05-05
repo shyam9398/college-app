@@ -24,6 +24,7 @@ function App() {
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(loadSaved);
   const [compareList, setCompareList] = useState([]);
+  const [compareMessage, setCompareMessage] = useState("");
   const [page, setPage] = useState(1);
   const [rank, setRank] = useState("");
   const [predicted, setPredicted] = useState([]);
@@ -86,15 +87,24 @@ function App() {
   const toggleCompare = useCallback((c) => {
     setCompareList((prev) => {
       if (isInCollegeList(prev, c)) {
+        setCompareMessage("");
         return prev.filter((x) => !sameCollege(x, c));
       }
-      if (prev.length >= 3) return prev;
+      if (prev.length >= 3) {
+        setCompareMessage("You can compare up to 3 colleges only");
+        return prev;
+      }
+      setCompareMessage("");
       return dedupeColleges([...prev, c]);
     });
   }, []);
 
   const removeFromCompare = useCallback((c) => {
-    setCompareList((prev) => prev.filter((x) => !sameCollege(x, c)));
+    setCompareList((prev) => {
+      const next = prev.filter((x) => !sameCollege(x, c));
+      if (next.length < 3) setCompareMessage("");
+      return next;
+    });
   }, []);
 
   const handlePredict = useCallback(() => {
@@ -148,7 +158,8 @@ function App() {
   return (
     <>
       <div className="app-shell">
-        <Navbar onNav={onNav} />
+        <Navbar onNav={onNav} compareCount={compareList.length} />
+
 
         <main className="main">
           <section id="section-explorer" className="section explorer-section">
@@ -173,6 +184,15 @@ function App() {
               <p className="empty-hint">No colleges match your filters. Try widening fees, rating, or location.</p>
             ) : (
               <>
+                <p className="compare-status" role="status" aria-live="polite">
+                  Selected for Compare ({compareList.length}/3)
+                </p>
+                {compareMessage ? (
+                  <p className="compare-limit-msg" role="alert">
+                    {compareMessage}
+                  </p>
+                ) : null}
+
                 <CardCarousel page={page} totalPages={totalPages} onPageChange={setPage}>
                   {paginated.map((c) => (
                     <div key={String(c.id)} className="card-carousel__slide">

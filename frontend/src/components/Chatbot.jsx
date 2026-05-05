@@ -3,10 +3,11 @@ import { buildChatbotReply } from "../utils/chatbotEngine";
 import { getCollegeWebsiteUrl } from "../utils/collegeWebsite";
 
 const QUICK_ACTIONS = [
-  { label: "Recommend colleges", text: "Recommend colleges for my rank 4000" },
-  { label: "Find best course", text: "I like coding what should I study" },
-  { label: "Search by rank", text: "My rank is 2500" },
+  { label: "Recommend colleges", text: "Recommend colleges" },
+  { label: "Best course for me", text: "Best course for me" },
+  { label: "Search by rank", text: "Search by rank" },
 ];
+
 
 function SegmentsView({ segments, onPickCollege }) {
   return (
@@ -88,21 +89,36 @@ function Chatbot({ colleges, onSelectCollege, activeCollege }) {
     return () => window.removeEventListener("keydown", onEsc);
   }, [open]);
 
-  const sendText = useCallback(
-    (raw) => {
-      const text = String(raw || "").trim();
-      if (!text) return;
-      const id = Date.now();
-      const bot = buildChatbotReply(text, collegeList);
-      setMessages((m) => [...m, { id: `u-${id}`, role: "user", segments: [{ type: "text", text }] }, { id: `b-${id}`, role: "bot", segments: bot.segments }]);
-      setInput("");
-    },
-    [collegeList]
-  );
+  const [loading, setLoading] = useState(false);
+
+  const sendText = useCallback(async (raw) => {
+    const text = String(raw || "").trim();
+    if (!text || loading) return;
+    
+    const userId = `u-${Date.now()}`;
+    setMessages((m) => [...m, { id: userId, role: "user", segments: [{ type: "text", text }] }]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const botReply = await buildChatbotReply(text, collegeList);
+      setMessages((m) => [...m, { id: `b-${Date.now()}`, role: "bot", segments: botReply.segments }]);
+    } catch (error) {
+      console.error("Chatbot error:", error);
+      setMessages((m) => [...m, { 
+        id: `b-error-${Date.now()}`, 
+        role: "bot", 
+        segments: [{ type: "text", text: "Sorry, try again. Service temporarily unavailable." }] 
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [collegeList, loading]);
 
   const send = useCallback(() => {
     sendText(input);
   }, [input, sendText]);
+
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -128,19 +144,26 @@ function Chatbot({ colleges, onSelectCollege, activeCollege }) {
               <div id="chatbot-title" className="chatbot-panel__title">
                 Decision assistant
               </div>
-              <div className="chatbot-panel__subtitle">Interest · rank · college lookup</div>
+              <div className="chatbot-panel__subtitle">Education-only guidance: interest · rank · college lookup</div>
             </div>
             <button type="button" className="chatbot-panel__close" onClick={() => setOpen(false)} aria-label="Close chat">
               ×
             </button>
           </div>
           <div className="chatbot-quick">
-            {QUICK_ACTIONS.map((a) => (
-              <button key={a.label} type="button" className="chatbot-quick__btn" onClick={() => sendText(a.text)}>
-                {a.label}
+            {QUICK_ACTIONS.map(({ label, text }, i) => (
+              <button 
+                key={i}
+                type="button" 
+                className="chatbot-quick__btn" 
+                onClick={() => sendText(text)}
+                disabled={loading}
+              >
+                {label}
               </button>
             ))}
           </div>
+
           <div className="chatbot-messages" role="log" aria-live="polite">
             {messages.map((msg) => (
               <div key={msg.id} className={`chatbot-bubble chatbot-bubble--${msg.role}`}>
@@ -165,9 +188,10 @@ function Chatbot({ colleges, onSelectCollege, activeCollege }) {
               aria-label="Message"
               maxLength={500}
             />
-            <button type="button" className="btn btn-primary chatbot-form__send" onClick={send}>
-              Send
+            <button type="button" className="btn btn-primary chatbot-form__send" onClick={send} disabled={loading}>
+              {loading ? "..." : "Send"}
             </button>
+
           </div>
           {activeCollege && (
             <div className="chatbot-context">
