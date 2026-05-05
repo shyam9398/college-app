@@ -3,6 +3,7 @@ import Navbar, { SECTION_IDS } from "./Navbar";
 import RatingTag from "./RatingTag";
 import { getDetailExtras } from "../utils/detailExtras";
 import { isInCollegeList } from "../utils/college";
+import { getCollegeWebsiteUrl } from "../utils/collegeWebsite";
 
 function CollegeDetailPage({
   college,
@@ -15,7 +16,9 @@ function CollegeDetailPage({
 }) {
   if (!college) return null;
 
-  const { courses, facilities, admission } = getDetailExtras(college);
+  const extras = getDetailExtras(college);
+  const courses = Array.isArray(college.courses) && college.courses.length ? college.courses : extras.courses;
+  const { facilities, admission } = extras;
   const isSaved = isInCollegeList(savedList, college);
   const inCompare = isInCollegeList(compareList, college);
   const compareDisabled = !inCompare && compareFull;
@@ -45,6 +48,7 @@ function CollegeDetailPage({
             <RatingTag rating={college.rating} />
           </div>
           <p className="detail-sub">{college.location}</p>
+          <p className="detail-admission">{college.description || "Choose this college if you want strong academics and placement support."}</p>
         </div>
 
         <div className="detail-grid-cards">
@@ -91,6 +95,9 @@ function CollegeDetailPage({
           <section className="info-card info-card--wide">
             <h2 className="info-card__title">Admission info</h2>
             <p className="detail-admission">{admission}</p>
+            <a className="chatbot-context__link" href={getCollegeWebsiteUrl(college)} target="_blank" rel="noopener noreferrer">
+              Visit official website
+            </a>
           </section>
         </div>
 

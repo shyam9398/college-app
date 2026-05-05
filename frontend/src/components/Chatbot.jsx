@@ -3,11 +3,10 @@ import { buildChatbotReply } from "../utils/chatbotEngine";
 import { getCollegeWebsiteUrl } from "../utils/collegeWebsite";
 
 const QUICK_ACTIONS = [
-  { label: "Recommend colleges", text: "Recommend colleges" },
-  { label: "Best course for me", text: "Best course for me" },
-  { label: "Search by rank", text: "Search by rank" },
+  { label: "Recommend by rank", text: "My rank is 4500. Recommend colleges." },
+  { label: "What is CSE?", text: "What is CSE?" },
+  { label: "Top colleges", text: "Show top colleges by rating." },
 ];
-
 
 function SegmentsView({ segments, onPickCollege }) {
   return (
@@ -54,82 +53,52 @@ function SegmentsView({ segments, onPickCollege }) {
 function Chatbot({ colleges, onSelectCollege, activeCollege }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState(() => [
     {
-      id: "w",
+      id: "welcome",
       role: "bot",
-      segments: [
-        {
-          type: "text",
-          text: "Hi—I can suggest colleges by interest, by rank, or answer about a specific college. Try the quick actions or type your question.",
-        },
-      ],
+      segments: [{ type: "text", text: "Hi! I can help with colleges, courses, and rank-based suggestions." }],
     },
   ]);
   const endRef = useRef(null);
   const inputRef = useRef(null);
-
   const collegeList = useMemo(() => (Array.isArray(colleges) ? colleges : []), [colleges]);
-
-  useEffect(() => {
-    if (!open) return;
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, open]);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
 
   useEffect(() => {
-    if (!open) return undefined;
-    const onEsc = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onEsc);
-    return () => window.removeEventListener("keydown", onEsc);
-  }, [open]);
+    if (!open) return;
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, open]);
 
-  const [loading, setLoading] = useState(false);
-
-  const sendText = useCallback(async (raw) => {
-    const text = String(raw || "").trim();
-    if (!text || loading) return;
-    
-    const userId = `u-${Date.now()}`;
-    setMessages((m) => [...m, { id: userId, role: "user", segments: [{ type: "text", text }] }]);
-    setInput("");
-    setLoading(true);
-
-    try {
-      const botReply = await buildChatbotReply(text, collegeList);
-      setMessages((m) => [...m, { id: `b-${Date.now()}`, role: "bot", segments: botReply.segments }]);
-    } catch (error) {
-      console.error("Chatbot error:", error);
-      setMessages((m) => [...m, { 
-        id: `b-error-${Date.now()}`, 
-        role: "bot", 
-        segments: [{ type: "text", text: "Sorry, try again. Service temporarily unavailable." }] 
-      }]);
-    } finally {
-      setLoading(false);
-    }
-  }, [collegeList, loading]);
-
-  const send = useCallback(() => {
-    sendText(input);
-  }, [input, sendText]);
-
-
-  const onKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  };
+  const sendText = useCallback(
+    async (text) => {
+      const clean = String(text || "").trim();
+      if (!clean || loading) return;
+      setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", segments: [{ type: "text", text: clean }] }]);
+      setInput("");
+      setLoading(true);
+      try {
+        const reply = await buildChatbotReply(clean, collegeList);
+        setMessages((prev) => [...prev, { id: `b-${Date.now()}`, role: "bot", segments: reply.segments || [] }]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { id: `b-err-${Date.now()}`, role: "bot", segments: [{ type: "text", text: "Please try again in a moment." }] },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [collegeList, loading]
+  );
 
   const pickCollege = useCallback(
-    (c) => {
-      onSelectCollege(c);
+    (college) => {
+      if (typeof onSelectCollege === "function") onSelectCollege(college);
       setOpen(false);
     },
     [onSelectCollege]
@@ -138,40 +107,29 @@ function Chatbot({ colleges, onSelectCollege, activeCollege }) {
   return (
     <div className="chatbot-widget">
       {open && (
-        <div className="chatbot-panel" id="chatbot-panel" role="dialog" aria-labelledby="chatbot-title" aria-modal="false">
+        <div className="chatbot-panel" id="chatbot-panel" role="dialog" aria-labelledby="chatbot-title">
           <div className="chatbot-panel__head">
             <div>
               <div id="chatbot-title" className="chatbot-panel__title">
-                Decision assistant
+                Decision Assistant
               </div>
-              <div className="chatbot-panel__subtitle">Education-only guidance: interest · rank · college lookup</div>
+              <div className="chatbot-panel__subtitle">Education guidance only</div>
             </div>
-            <button type="button" className="chatbot-panel__close" onClick={() => setOpen(false)} aria-label="Close chat">
+            <button type="button" className="chatbot-panel__close" onClick={() => setOpen(false)} aria-label="Close chatbot">
               ×
             </button>
           </div>
           <div className="chatbot-quick">
-            {QUICK_ACTIONS.map(({ label, text }, i) => (
-              <button 
-                key={i}
-                type="button" 
-                className="chatbot-quick__btn" 
-                onClick={() => sendText(text)}
-                disabled={loading}
-              >
-                {label}
+            {QUICK_ACTIONS.map((q) => (
+              <button key={q.label} type="button" className="chatbot-quick__btn" onClick={() => sendText(q.text)} disabled={loading}>
+                {q.label}
               </button>
             ))}
           </div>
-
-          <div className="chatbot-messages" role="log" aria-live="polite">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`chatbot-bubble chatbot-bubble--${msg.role}`}>
-                {msg.role === "user" ? (
-                  msg.segments?.[0]?.text
-                ) : (
-                  <SegmentsView segments={msg.segments || []} onPickCollege={pickCollege} />
-                )}
+          <div className="chatbot-messages">
+            {messages.map((m) => (
+              <div key={m.id} className={`chatbot-bubble chatbot-bubble--${m.role}`}>
+                {m.role === "user" ? m.segments?.[0]?.text : <SegmentsView segments={m.segments || []} onPickCollege={pickCollege} />}
               </div>
             ))}
             <div ref={endRef} />
@@ -179,39 +137,44 @@ function Chatbot({ colleges, onSelectCollege, activeCollege }) {
           <div className="chatbot-form">
             <input
               ref={inputRef}
-              type="text"
               className="input-rounded chatbot-form__input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="e.g. I like AI, or my rank is 4000…"
-              aria-label="Message"
-              maxLength={500}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") sendText(input);
+              }}
+              placeholder="Ask about colleges, courses, rank..."
             />
-            <button type="button" className="btn btn-primary chatbot-form__send" onClick={send} disabled={loading}>
+            <button type="button" className="btn btn-primary chatbot-form__send" onClick={() => sendText(input)} disabled={loading}>
               {loading ? "..." : "Send"}
             </button>
-
           </div>
-          {activeCollege && (
+          {activeCollege ? (
             <div className="chatbot-context">
-              On details:{" "}
-              <a href={getCollegeWebsiteUrl(activeCollege)} target="_blank" rel="noopener noreferrer" className="chatbot-context__link">
-                Visit {activeCollege.name} website
+              Official link:{" "}
+              <a className="chatbot-context__link" href={getCollegeWebsiteUrl(activeCollege)} target="_blank" rel="noopener noreferrer">
+                {activeCollege.name}
               </a>
             </div>
-          )}
+          ) : null}
         </div>
       )}
       <button
         type="button"
         className={`chatbot-fab ${open ? "chatbot-fab--open" : ""}`}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-controls={open ? "chatbot-panel" : undefined}
-        aria-label={open ? "Close assistant" : "Open assistant"}
+        aria-label={open ? "Close decision assistant" : "Open decision assistant"}
       >
-        {open ? "×" : <span aria-hidden="true">💬</span>}
+        {open ? (
+          "×"
+        ) : (
+          <span className="chatbot-fab__icon-wrap" aria-hidden="true">
+            <span className="chatbot-fab__robot">🤖</span>
+            <span className="chatbot-fab__cap">🎓</span>
+          </span>
+        )}
       </button>
     </div>
   );

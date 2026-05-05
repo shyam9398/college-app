@@ -1,8 +1,9 @@
-import { sortCollegesByRatingTier, dedupeColleges } from "./college";
+import { getCollegeWebsiteUrl } from "./collegeWebsite";
+import { sortCollegesByRatingTier } from "./college";
 
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || "AIzaSyAReZ6uGjCKrSluYUQeC56nu-k7n4C60wY";
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
-const DOMAIN_LOCK_MESSAGE = "I can only help with education-related queries";
+const DOMAIN_LOCK_MESSAGE = "I only help with education-related queries.";
 const DOMAIN_KEYWORDS = [
   "college",
   "university",
@@ -24,6 +25,17 @@ const DOMAIN_KEYWORDS = [
   "mechanical",
   "civil",
   "electrical",
+  "andhra",
+  "hyderabad",
+  "delhi",
+  "mumbai",
+  "bangalore",
+  "iit",
+  "nit",
+  "cse",
+  "ai",
+  "it",
+  "ece",
 ];
 
 function isEducationQuery(text) {
@@ -37,10 +49,32 @@ function getMentionedCollege(userText, colleges) {
   return colleges.find((c) => query.includes(String(c.name || "").toLowerCase()));
 }
 
-function getCollegeGoogleSearchLink(college) {
-  const q = `${college?.name || ""} ${college?.location || ""} college details`.trim();
-  return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
-}
+const BRANCH_INFO = {
+  cse: {
+    full_form: "Computer Science and Engineering",
+    description: "Focuses on programming, software systems and AI basics.",
+    career_options: "Software Engineer, Data Scientist, AI Engineer",
+    avg_salary: "8 LPA",
+  },
+  ai: {
+    full_form: "Artificial Intelligence",
+    description: "Focuses on machine learning, deep learning and data-driven systems.",
+    career_options: "AI Engineer, ML Engineer, Data Scientist",
+    avg_salary: "9 LPA",
+  },
+  it: {
+    full_form: "Information Technology",
+    description: "Focuses on software systems, cloud and networking.",
+    career_options: "IT Engineer, Cloud Engineer, System Engineer",
+    avg_salary: "7.5 LPA",
+  },
+  ece: {
+    full_form: "Electronics and Communication Engineering",
+    description: "Focuses on electronics, communication and embedded systems.",
+    career_options: "Embedded Engineer, Telecom Engineer, Electronics Engineer",
+    avg_salary: "6 LPA",
+  },
+};
 
 function rankToMinRating(rank) {
   if (rank < 2000) return 4.7;
@@ -49,83 +83,165 @@ function rankToMinRating(rank) {
   return 4.0;
 }
 
-function localRecommendByRank(userText, colleges) {
-  const rankMatch = String(userText || "").match(/\b\d{2,6}\b/);
+function getRankFromText(text) {
+  const rankMatch = String(text || "").match(/\b\d{2,6}\b/);
   if (!rankMatch) return null;
   const rank = Number(rankMatch[0]);
-  if (!Number.isFinite(rank)) return null;
+  return Number.isFinite(rank) ? rank : null;
+}
+
+function formatCollegeReason(college, contextText) {
+  return `${college.name} is a strong choice with ${college.placement}% placement and ${college.rating} rating. Best for students targeting ${contextText}.`;
+}
+
+function buildRankReply(rank, colleges) {
   const minRating = rankToMinRating(rank);
-  const picks = colleges
-    .filter((c) => Number(c.rating || 0) >= minRating)
-    .sort(sortCollegesByRatingTier)
-    .slice(0, 4);
+  const picks = colleges.filter((c) => Number(c.rating || 0) >= minRating).sort(sortCollegesByRatingTier).slice(0, 4);
+  if (!picks.length) return null;
   return {
-    text: `Based on rank ${rank}, these colleges look suitable. You can compare them for final decision-making.`,
-    colleges: picks,
+    segments: [
+      { type: "text", text: `Based on your rank ${rank}, these are realistic options.` },
+      { type: "colleges", colleges: picks },
+      { type: "text", text: `${formatCollegeReason(picks[0], "your current rank band")} You can compare these colleges or save them.` },
+    ],
   };
 }
 
-function localRecommendByInterest(userText, colleges) {
-  const q = String(userText || "").toLowerCase();
-  const hasInterestCue = ["interest", "recommend", "suggest", "best course", "best colleges", "career"].some((x) =>
-    q.includes(x)
-  );
-  if (!hasInterestCue) return null;
-  const picks = colleges.slice().sort(sortCollegesByRatingTier).slice(0, 4);
-  return {
-    text: "These are strong options to start with. Use Save for shortlist and Compare to evaluate side by side.",
-    colleges: picks,
-  };
+function parseBranch(text) {
+  const q = String(text || "").toLowerCase();
+  if (q.includes("cse")) return "cse";
+  if (q.includes("ai")) return "ai";
+  if (q.includes("it")) return "it";
+  if (q.includes("ece")) return "ece";
+  return null;
 }
 
-/**
- * Parse Gemini text response into segments format
- * @param {string} text - Gemini response
- * @param {Array} colleges - Available colleges
- * @returns {Array} segments
- */
-function parseGeminiResponse(text, colleges) {
-  // Extract JSON if present, fallback to plain text
-  let jsonData = null;
-  try {
-    const jsonMatch = text.match(/\{[\\s\\S]*\}/);
-    if (jsonMatch) {
-      jsonData = JSON.parse(jsonMatch[0]);
-    }
-  } catch {}
+function parseLocation(text) {
+  const q = String(text || "").toLowerCase();
+  const m = q.match(/\bin\s+([a-z\s]+)$/i);
+  if (m?.[1]) return m[1].trim();
+  return ["andhra pradesh", "hyderabad", "delhi", "mumbai", "bangalore"].find((k) => q.includes(k)) || null;
+}
 
-  const segments = [];
+function buildRecommendationByProfile(rank, branch, location, colleges) {
+  const lowerBranch = branch || "cse";
+  const filtered = colleges
+    .filter((c) => Number(c.cutoff_rank || 0) >= rank)
+    .filter((c) =>
+      Array.isArray(c.courses) ? c.courses.some((course) => String(course).toLowerCase().includes(lowerBranch)) : true
+    )
+    .filter((c) => (location ? String(c.location || "").toLowerCase().includes(location) : true))
+    .sort((a, b) => {
+      const nirf = (Number(a.nirf_rank) || 9999) - (Number(b.nirf_rank) || 9999);
+      if (nirf !== 0) return nirf;
+      return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+    });
 
-  if (jsonData) {
-    // Add main text
-    if (jsonData.text) {
-      segments.push({ type: "text", text: jsonData.text });
-    }
-
-    // Add colleges chips if provided
-    if (jsonData.colleges && Array.isArray(jsonData.colleges)) {
-      const validColleges = dedupeColleges(jsonData.colleges.filter(c => 
-        colleges.some(existing => String(existing.id) === String(c.id))
-      ));
-      if (validColleges.length) {
-        segments.push({ type: "colleges", colleges: validColleges });
-      }
-    }
-
-    // Add link if provided
-    if (jsonData.link && jsonData.link.href) {
-      segments.push({ 
-        type: "link", 
-        href: jsonData.link.href, 
-        linkLabel: jsonData.link.label || "Visit website" 
-      });
-    }
-  } else {
-    // Plain text fallback
-    segments.push({ type: "text", text: text });
+  let picks = filtered.slice(0, 5);
+  if (!picks.length) {
+    picks = colleges
+      .filter((c) => (rank > 30000 ? String(c.type).toLowerCase() === "private" : true))
+      .sort(sortCollegesByRatingTier)
+      .slice(0, 5);
   }
 
-  return segments;
+  const rankAdvice = rank <= 4000 ? "Great rank. IIT/NIT-style options are prioritized." : rank > 30000 ? "Higher rank range detected, so practical private options are included." : "Balanced rank range, so realistic mixed options are shown.";
+  return {
+    segments: [
+      { type: "text", text: `${rankAdvice} Based on your rank and branch preference, these colleges fit best.` },
+      { type: "colleges", colleges: picks },
+      { type: "text", text: "You can Save or Compare these." },
+    ],
+  };
+}
+
+function buildCollegeDetailReply(college) {
+  return {
+    segments: [
+      {
+        type: "text",
+        text: `${college.name} is located in ${college.location}. Fees are around ₹${college.fees}, rating is ${college.rating}, and placement is ${college.placement}%. ${college.description || ""}`.trim(),
+      },
+      { type: "link", href: getCollegeWebsiteUrl(college), linkLabel: `Visit ${college.name} official website` },
+      { type: "text", text: "You can compare this college with others or save it for later." },
+    ],
+  };
+}
+
+function buildRatingReply(text, colleges) {
+  const m = String(text || "").match(/(?:above|over|>=?|more than)\s*(\d(?:\.\d)?)/i);
+  if (!m) return null;
+  const min = Number(m[1]);
+  if (!Number.isFinite(min)) return null;
+  const picks = colleges.filter((c) => Number(c.rating || 0) >= min).sort(sortCollegesByRatingTier).slice(0, 6);
+  return {
+    segments: [
+      { type: "text", text: `Here are colleges with rating ${min}+.` },
+      { type: "colleges", colleges: picks },
+      { type: "text", text: "These are quality-focused options. Compare fees and placement before deciding." },
+    ],
+  };
+}
+
+function buildLocationReply(text, colleges) {
+  const q = String(text || "").toLowerCase();
+  const inMatch = q.match(/\bin\s+([a-z\s]+)$/i);
+  const locationHint = inMatch ? inMatch[1].trim() : null;
+  const state = locationHint || ["andhra pradesh", "hyderabad", "delhi", "mumbai", "bangalore"].find((k) => q.includes(k));
+  if (!state) return null;
+  const picks = colleges
+    .filter((c) => String(c.location || "").toLowerCase().includes(String(state).toLowerCase()))
+    .sort(sortCollegesByRatingTier)
+    .slice(0, 6);
+  return {
+    segments: [
+      { type: "text", text: `Here are colleges in ${state}.` },
+      { type: "colleges", colleges: picks },
+      { type: "text", text: "Location fit looks good here. Next step: compare commute, fees, and placements." },
+    ],
+  };
+}
+
+function buildCourseReply(text, colleges) {
+  const q = String(text || "").toLowerCase();
+  const pickedKey = parseBranch(q) || (q.includes("mechanical") ? "mechanical" : null);
+  const picked = pickedKey && BRANCH_INFO[pickedKey]
+    ? {
+        key: pickedKey,
+        title: BRANCH_INFO[pickedKey].full_form,
+        careers: BRANCH_INFO[pickedKey].career_options.toLowerCase(),
+        desc: BRANCH_INFO[pickedKey].description,
+        salary: BRANCH_INFO[pickedKey].avg_salary,
+      }
+    : null;
+  const asksBestCourse = q.includes("best course");
+  if (!picked && !asksBestCourse) return null;
+  const focus = picked?.key || "cse";
+  const top = colleges
+    .filter((c) => Array.isArray(c.courses) && c.courses.some((course) => String(course).toLowerCase().includes(focus)))
+    .sort(sortCollegesByRatingTier)
+    .slice(0, 4);
+  const intro = picked
+    ? `${picked.title}: ${picked.desc} Careers: ${picked.careers}. Typical average salary is around ${picked.salary}.`
+    : "Choose a course based on your strengths: coding and problem-solving usually align with CSE/AI; hands-on hardware aligns with core branches.";
+  return {
+    segments: [
+      { type: "text", text: `${intro} These colleges are strong for this path.` },
+      { type: "colleges", colleges: top },
+      { type: "text", text: "You can compare these colleges or save them to shortlist." },
+    ],
+  };
+}
+
+function buildTopCollegesReply(colleges) {
+  const top = colleges.slice().sort(sortCollegesByRatingTier).slice(0, 5);
+  return {
+    segments: [
+      { type: "text", text: "These are top colleges by rating and outcomes." },
+      { type: "colleges", colleges: top },
+      { type: "text", text: "Best suited for students aiming for strong placements and academic rigor." },
+    ],
+  };
 }
 
 /**
@@ -147,105 +263,70 @@ export async function buildChatbotReply(userText, colleges) {
     return { segments: [{ type: "text", text: DOMAIN_LOCK_MESSAGE }] };
   }
 
+  const rank = getRankFromText(userText);
+  const branch = parseBranch(userText);
+  const location = parseLocation(userText);
+  if (rank) {
+    if (branch || location) {
+      return buildRecommendationByProfile(rank, branch, location, list);
+    }
+    const rankReply = buildRankReply(rank, list);
+    if (rankReply) return rankReply;
+  }
+
   const mentionedCollege = getMentionedCollege(userText, list);
   if (mentionedCollege) {
-    return {
-      segments: [
-        {
-          type: "text",
-          text: `${mentionedCollege.name} is in ${mentionedCollege.location}. Fees are around ₹${mentionedCollege.fees}, rating is ${mentionedCollege.rating}, and placement is ${mentionedCollege.placement}%.`,
-        },
-        {
-          type: "link",
-          href: getCollegeGoogleSearchLink(mentionedCollege),
-          linkLabel: `Search ${mentionedCollege.name} on Google`,
-        },
-      ],
-    };
+    return buildCollegeDetailReply(mentionedCollege);
   }
 
-  const rankBased = localRecommendByRank(userText, list);
-  if (rankBased && rankBased.colleges.length) {
-    return {
-      segments: [
-        { type: "text", text: rankBased.text },
-        { type: "colleges", colleges: rankBased.colleges },
-      ],
-    };
+  const ratingReply = buildRatingReply(userText, list);
+  if (ratingReply) return ratingReply;
+
+  const locationReply = buildLocationReply(userText, list);
+  if (locationReply) return locationReply;
+
+  const courseReply = buildCourseReply(userText, list);
+  if (courseReply) return courseReply;
+
+  if (String(userText).toLowerCase().includes("top colleges")) {
+    return buildTopCollegesReply(list);
   }
 
-  const interestBased = localRecommendByInterest(userText, list);
-  if (interestBased && interestBased.colleges.length) {
-    return {
-      segments: [
-        { type: "text", text: interestBased.text },
-        { type: "colleges", colleges: interestBased.colleges },
-      ],
-    };
-  }
+  const defaultGuidance = {
+    segments: [
+      {
+        type: "text",
+        text: "Try: rank + branch (e.g. 'rank 7000 CSE in Hyderabad'), ask about CSE/AI, or filter by rating/location.",
+      },
+      { type: "text", text: "You can Save or Compare these." },
+    ],
+  };
 
-  if (!GEMINI_API_KEY) {
-    return {
-      segments: [
-        {
-          type: "text",
-          text: "I can help with colleges, courses, careers, and rank-based suggestions. Add a Gemini API key to enable deeper guidance.",
-        },
-      ],
-    };
-  }
+  if (!GEMINI_API_KEY) return defaultGuidance;
 
   try {
     const response = await fetch(GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `You are an education chatbot for College Explorer. 
-
-MANDATORY RULES:
-1. ONLY respond to education/college queries (courses, ranks, admissions, careers).
-2. For ANY other topic: EXACTLY respond: "${DOMAIN_LOCK_MESSAGE}"
-3. ONLY suggest colleges from provided data.
-4. Response format: JSON object only - { "text": "your response", "colleges": [{"id": "123", "name": "College X", "location": "Delhi", "fees": "5L", "rating": "4.8", "placement": "90%"}], "link": {"href": "url", "label": "text"} }
-5. Match college IDs exactly.
-6. For ranks/interests: suggest 3-4 top matches.
-7. Keep friendly/professional/minimal.
-
-COLLEGE DATA SUMMARY (use IDs/names accurately):
-${list.slice(0, 50).map(c => `ID:${c.id} ${c.name} (${c.location}) rating:${c.rating} fees:${c.fees}`).join('; ')}
-
-User: ${userText}`
-          }]
-        }]
-      })
+        contents: [
+          {
+            parts: [
+              {
+                text: `Rewrite this college guidance in 1-2 short helpful lines: "${String(userText).slice(0, 180)}". Keep it decision-oriented.`,
+              },
+            ],
+          },
+        ],
+      }),
     });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
+    if (!response.ok) return defaultGuidance;
     const data = await response.json();
-    const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, couldn't process that.";
-
-    // Education guardrail check
-    if (geminiText.includes(DOMAIN_LOCK_MESSAGE)) {
-      return { segments: [{ type: "text", text: DOMAIN_LOCK_MESSAGE }] };
-    }
-
-    const segments = parseGeminiResponse(geminiText, list);
-    return { segments };
-  } catch (error) {
-    console.warn("Gemini API failed, using local fallback:", error);
-    return {
-      segments: [
-        {
-          type: "text",
-          text: "I can help with rank-based suggestions, course guidance, and college lookup. Try mentioning your rank or a specific college name.",
-        },
-      ],
-    };
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return defaultGuidance;
+    return { segments: [{ type: "text", text }, ...defaultGuidance.segments.slice(1)] };
+  } catch {
+    return defaultGuidance;
   }
 }
 

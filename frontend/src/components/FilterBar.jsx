@@ -1,7 +1,19 @@
 import React from "react";
-import { FEES_FILTER_OPTIONS, RATING_FILTER_OPTIONS } from "../utils/filterColleges";
+import { COURSE_FILTER_OPTIONS, FEES_FILTER_OPTIONS, RATING_FILTER_OPTIONS } from "../utils/filterColleges";
 
-function FilterBar({ search, onSearchChange, location, onLocationChange, locations, feesRange, onFeesRangeChange, ratingMin, onRatingMinChange }) {
+function FilterBar({
+  search,
+  onSearchChange,
+  location,
+  onLocationChange,
+  locations,
+  feesRange,
+  onFeesRangeChange,
+  ratingMin,
+  onRatingMinChange,
+  course,
+  onCourseChange,
+}) {
   return (
     <div className="filter-bar">
       <div className="filter-bar__row filter-bar__row--compact">
@@ -59,6 +71,22 @@ function FilterBar({ search, onSearchChange, location, onLocationChange, locatio
           onChange={(e) => onRatingMinChange(e.target.value)}
         >
           {RATING_FILTER_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+
+        <label className="sr-only" htmlFor="filter-course">
+          Course
+        </label>
+        <select
+          id="filter-course"
+          className="input-rounded select-rounded filter-bar__compact-select"
+          value={course}
+          onChange={(e) => onCourseChange(e.target.value)}
+        >
+          {COURSE_FILTER_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>

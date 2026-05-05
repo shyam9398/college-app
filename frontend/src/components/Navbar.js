@@ -12,7 +12,10 @@ function Navbar({ onNav = () => {}, compareCount = 0 }) {
     <header className="navbar">
       <div className="navbar-inner">
         <button type="button" className="logo" onClick={() => onNav("explorer")}>
-          College Explorer
+          <span className="logo-mark" aria-hidden="true">
+            🎓
+          </span>
+          <span>College Explorer</span>
         </button>
         <nav className="nav-links" aria-label="Main">
           <button type="button" onClick={() => onNav("explorer")}>
