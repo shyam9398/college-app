@@ -10,8 +10,8 @@ A full-stack web application that helps students **search, compare, and choose t
 👉 https://college-app-mhyb.vercel.app/
 
 ##Github Repo:
-👉 https://github.com/shyam9398/college-app.git
----
+-
+👉https://github.com/shyam9398/college-app.git 
 
 ## 🚀 Features
 
